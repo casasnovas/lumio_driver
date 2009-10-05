@@ -1,0 +1,52 @@
+.___                 __         .__  .__   
+|   | ____   _______/  |______  |  | |  |  
+|   |/    \ /  ___/\   __\__  \ |  | |  |  
+|   |   |  \\___ \  |  |  / __ \|  |_|  |__
+|___|___|  /____  > |__| (____  /____/____/
+         \/     \/            \/           
+
+To install this driver correctly, just do the folowing:
+  42sh$ make
+As root:
+  42sh$ make install
+
+ /!\----------
+| ! | Don't forget that the driver won't be loaded at next boot, to do so, follow
+| ! | instructions corresponding to your distribution.
+ \!/----------
+
+ArchLinux:
+As root edit /etc/rc.conf and add 'ts_driver' to the MODULES list:
+  42sh$ emacs /etc/rc.conf
+MODULES should look like 'MODULES( ... ts_driver ...)' where the '...' are
+other modules that are loaded at boot time.
+
+Gentoo:
+As root add a line to the file /etc/modules.autoload/kernel-2.6 containing
+'ts_driver':
+  42sh$ echo 'ts_driver' >> /etc/modules.autoload/kernel-2.6
+
+Debian/Ubuntu:
+As root add a line to the file /etc/modules containing 'ts_driver':
+  42sh$ echo 'ts_driver' >> /etc/modules
+
+
+Fedora/RedHat/CentOS/Mandrake/Mandriva:
+As root add a line to the file /etc/modules.conf containing 'ts_driver'
+  42sh$ echo 'ts_driver' >> /etc/modules.conf
+
+If your distribution is not in the list above, please refer to its
+documentation.
+
+ ____ ___      .__                 __         .__  .__   
+|    |   \____ |__| ____   _______/  |______  |  | |  |  
+|    |   /    \|  |/    \ /  ___/\   __\__  \ |  | |  |  
+|    |  /   |  \  |   |  \\___ \  |  |  / __ \|  |_|  |__
+|______/|___|  /__|___|  /____  > |__| (____  /____/____/
+             \/        \/     \/            \/           
+As root:
+  42sh$ make uninstall
+
+ /!\---------
+| ! | If you added led_driver to be loaded at boot time, don't forget to remove it.
+ \!/---------

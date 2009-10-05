@@ -1,0 +1,101 @@
+.____                  .__               .___      .__                    
+|    |    __ __  _____ |__| ____       __| _/______|__|__  __ ___________ 
+|    |   |  |  \/     \|  |/  _ \     / __ |\_  __ \  \  \/ // __ \_  __ \
+|    |___|  |  /  Y Y  \  (  <_> )   / /_/ | |  | \/  |\   /\  ___/|  | \/
+|_______ \____/|__|_|  /__|\____/____\____ | |__|  |__| \_/  \___  >__|   
+        \/           \/        /_____/    \/                     \/       
+
+Author:  Quentin Casasnovas
+Licence: GPL2
+Version: 0.1
+
+1. Description
+~~~~~~~~~~~~~~
+  This driver is part of my last year project at Epita, a french engeeniring
+school ; it aims at making work a lumio touchscreen (which supports two finger
+touches) with linux kernel 2.6.XX.
+
+  To do so it makes it appear to userland as if it was two different mice
+connected to the computer. Thanks to that, you'll be able to use your
+touchscreen directly in X graphic environment without adding new X driver for
+this input device.
+
+  Unfortunaltly, as of today, X doesn't support multiple cursors nativly : what
+X does is kind off multiplexing the different mice in one cursor. To be able to
+use different cursors, a solution exists : MPX (Multi Pointer eXtension) which
+has been merged with X in 2009 and should therefore be part of the next X
+stable version (1.7). Using MPX parallell ts_driver (and of course a lumio
+touchscreen) will take you to the wonderfull world of multi-touch in your
+prefered OS, GNU/Linux :)
+
+  This is my second driver for Linux so it certainly isn't perfect, feel free
+to modify it to suit your needs and give me feedback about it :)
+
+2. Usage
+~~~~~~~~
+  After having installed this driver, and as to be able to use it in X
+environnment, you should edit your xorg.conf to add two input devices which
+should be /dev/input/event{n,n+1} with evdev driver:
+
+/!\ evdev is a generic X driver for input devices and as such may not suit your
+needs exactly. You may change it to "synaptics" driver which give good results
+too. I'm currently modifying it (the synaptics driver) to make it work with
+absolute coordinates, which will give a complete support for the touchscreen
+(double clic, tap and drag, ... etc).
+
+Section "ServerLayout"
+	...
+	InputDevice	"lumio1"
+	InputDevice	"lumio2"
+	...
+EndSection
+
+Section "InputDevice"
+	Identifier	"lumio1"
+	Driver		"evdev"
+	Option		"Device"		"/dev/input/eventN"
+	Option		"GrabDevice"		"true"	# /!\ Don't forget that option
+	Option		"SendCoreEvents"	"true"
+	...
+EndSection
+
+  If you have loaded MPX in your X server, you may want to associate a different
+cursor with each char device as to be able to try the multitouch in linux :)
+To do so, xinput is your friend:
+
+  42sh$ xinput list --short
+
+This command should give you a tree of all devices recognized by X. Just
+remember that a "Master device" is a cursor on the screen (ie. master =
+virtual) and that a "Slave device" should be a physical device like a mouse or
+a keyboard. Now create two new master devices (cursors):
+
+  42sh$ xinput create-master "teton"
+  42sh$ xinput create-master "uretre"
+
+At this point you should have 3 cursors on the screen (maybe you only see two
+of them because they overlap each other), it's time to attach the two slave
+devices that correspond to your touchscreen:
+
+  42sh$ xinput reattach <id_first_lumio_device> <id_first_master_created>
+  42sh$ xinput reattach <id_second_lumio_device> <id_second_master_created>
+
+(To know the device associated with the newly created master device, just
+re-type xinput list --short).
+
+  There we go, your OS is miltitouch capable ;) Now, as almost none window
+manager has been ported to Xinput2, it should be very hard to play with those
+multiple cursors, but hey, who cares ? That rocks anyway :)
+
+3. Documentation
+~~~~~~~~~~~~~~~~
+  The source code is fully documented, you may read the source files directly,
+or generate a doxygen documentation in html using the command:
+  42sh$ make doc
+  You must have the programm doxygen to generate the documentation.
+
+4. Miscellaneous
+~~~~~~~~~~~~~~~~
+  The ascii font used in INSTALL and README files is "graffiti" ans has been
+generated with the online ascii generator present at
+http://www.network-science.de/ascii/
