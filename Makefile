@@ -12,6 +12,9 @@ lumio_driver:
 detach:
 	make -C helper/
 
+draw_mice:
+	make -C check/
+
 .PHONY: doc
 
 doc:
@@ -30,11 +33,12 @@ uninstall:
 	rmmod lumio_driver
 	rm $(DESTDIR)/misc/lumio_driver.ko
 
-tarball: clean
-	git archive --format=tar --prefix=$(PROJECT_NAME)-$(PROJECT_VERSION) HEAD > $(PROJECT_NAME)-$(PROJECT_VERSION).tar
+tarball:
+	git archive --format=tar --prefix=$(PROJECT_NAME)-$(PROJECT_VERSION)/ HEAD > $(PROJECT_NAME)-$(PROJECT_VERSION).tar
 	bzip2 $(PROJECT_NAME)-$(PROJECT_VERSION).tar
 
 clean:
+	make -C check/ clean
 	make -C helper/ clean
 	make -C src/ clean
 	rm -f lumio_driver.ko
