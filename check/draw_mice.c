@@ -1,6 +1,6 @@
 /**
  * I used this file to take the videos of the dualtouch capabilities. What it
- * foes is just drawing behind the mouse.
+ * does is just drawing behind the mouse.
  */
 
 #include <stdio.h>

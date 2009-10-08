@@ -823,11 +823,6 @@ static int __init		lumio_init(void)
 
   SAFE_CALL(usb_register(&lumio_driver),
 	    "Unable to register lumio touchscreen driver.\n");
-
-  printk(KERN_INFO "ABOUT TO HAPPENED!\n");
-  ret = 1;
-  ret = 7 / (ret - 1);
-  printk(KERN_INFO "HAPPENED %d!\n", ret);
   return (0);
 
  error:

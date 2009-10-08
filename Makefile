@@ -3,11 +3,14 @@ DESTDIR := /lib/modules/$(shell uname -r)
 PROJECT_NAME=lumio_driver
 PROJECT_VERSION=0.1
 
-all: lumio_driver
+all: lumio_driver detach
 
 lumio_driver:
 	make -C src/
 	cp src/lumio_driver.ko ./
+
+detach:
+	make -C helper/
 
 .PHONY: doc
 
@@ -32,6 +35,7 @@ tarball: clean
 	bzip2 $(PROJECT_NAME)-$(PROJECT_VERSION).tar
 
 clean:
+	make -C helper/ clean
 	make -C src/ clean
 	rm -f lumio_driver.ko
 	rm -Rf doc/*

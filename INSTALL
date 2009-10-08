@@ -10,6 +10,13 @@ To install this driver correctly, just do the folowing:
 As root:
   42sh$ make install
 
+You can verify that the driver is working by finding th devices it has created
+in /dev/input, it should be event{n, n+1} or mouse{n, n+1} depending on many
+things. Once you've find what are the devices, just do a :
+  42sh$ cat /dev/input/eventX
+and move your fingers on the touchscreen, if you see strange characters on your
+terminal, it means the driver is well installed :)
+
  /!\----------
 | ! | Don't forget that the driver won't be loaded at next boot, to do so, follow
 | ! | instructions corresponding to your distribution.
