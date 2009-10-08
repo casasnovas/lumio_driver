@@ -24,7 +24,7 @@ this input device.
 X does is kind off multiplexing the different mice in one cursor. To be able to
 use different cursors, a solution exists : MPX (Multi Pointer eXtension) which
 has been merged with X in 2009 and should therefore be part of the next X
-stable version (1.7). Using MPX parallell ts_driver (and of course a lumio
+stable version (1.7). Using MPX parallell lumio_driver (and of course a lumio
 touchscreen) will take you to the wonderfull world of multi-touch in your
 prefered OS, GNU/Linux :)
 
@@ -36,12 +36,6 @@ to modify it to suit your needs and give me feedback about it :)
   After having installed this driver, and as to be able to use it in X
 environnment, you should edit your xorg.conf to add two input devices which
 should be /dev/input/event{n,n+1} with evdev driver:
-
-/!\ evdev is a generic X driver for input devices and as such may not suit your
-needs exactly. You may change it to "synaptics" driver which give good results
-too. I'm currently modifying it (the synaptics driver) to make it work with
-absolute coordinates, which will give a complete support for the touchscreen
-(double clic, tap and drag, ... etc).
 
 Section "ServerLayout"
 	...
@@ -58,6 +52,15 @@ Section "InputDevice"
 	Option		"SendCoreEvents"	"true"
 	...
 EndSection
+  _
+ / \ 
+( ! ) -------------------------------------------------------------------------
+ \_/  evdev is a generic X driver for input devices and as such may not suit
+your needs exactly. You may change it to "synaptics" driver which give good
+results too. I'm currently modifying it (the synaptics driver) to make it work
+with absolute coordinates, which will give a complete support for the
+touchscreen (double clic, tap and drag, ... etc).
+-------------------------------------------------------------------------------
 
   If you have loaded MPX in your X server, you may want to associate a different
 cursor with each char device as to be able to try the multitouch in linux :)

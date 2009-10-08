@@ -1,6 +1,14 @@
 2009-10-05  Quentin Casasnovas  <quentin.casasnovas@gmail.com>
 
-	* Version 0.1
+	* Version 0.1: First public release of this driver.
+
+	* Features: Emulates two touchpads.
+
+	* TODO:
+		- Add support for next firmware version (Digitizer)
+		- Convert documentation to kernel-doc
+		- Add support for activating/deactivating the controller
+		sound.
 
 Copyright 2009 Quentin Casasnovas
 Copying and distribution of this file, with or without modification, are

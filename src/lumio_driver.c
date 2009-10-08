@@ -137,12 +137,6 @@ static int			lumio_ioctl(struct inode*	inode,
 
   switch (cmd)
     {
-    case IOCTL_SET_DELAY_CLIC:
-      break;
-    case IOCTL_SET_SINGLETOUCH:
-      break;
-    case IOCTL_SET_DUALTOUCH:
-      break;
     case IOCTL_SET_SOUND_ON:
       break;
     case IOCTL_SET_SOUND_OFF:
@@ -533,12 +527,12 @@ static void			lumio_treat_first_event(struct usb_touchscreen* data)
   else
     which = 1;
 
-  input_report_key(data->fakemouse[which].idev,
-		   BTN_TOUCH,
-		   1);
   /* input_report_key(data->fakemouse[which].idev, */
   /* 		   BTN_TOUCH, */
-  /* 		   !!!((event[3] & LUMIO_OPERATION_MASK) & LUMIO_OPERATION_UP)); */
+  /* 		   1); */
+  input_report_key(data->fakemouse[which].idev,
+  		   BTN_TOUCH,
+  		   !!!((event[3] & LUMIO_OPERATION_MASK) & LUMIO_OPERATION_UP));
   input_report_abs(data->fakemouse[which].idev,
 		   ABS_X,
 		   ((event[3] >> 4) << 8) | event[4]);
@@ -562,12 +556,12 @@ static void			lumio_treat_second_event(struct usb_touchscreen* data)
   else
     which = 1;
 
-  input_report_key(data->fakemouse[which].idev,
-		   BTN_TOUCH,
-		   1);
   /* input_report_key(data->fakemouse[which].idev, */
   /* 		   BTN_TOUCH, */
-  /* 		   !!!((event[9] >> 4) & LUMIO_OPERATION_UP)); */
+  /* 		   1); */
+  input_report_key(data->fakemouse[which].idev,
+  		   BTN_TOUCH,
+  		   !!!((event[9] >> 4) & LUMIO_OPERATION_UP));
   input_report_abs(data->fakemouse[which].idev,
 		   ABS_X,
 		   ((event[11] & 0xf) << 8) | event[10]);

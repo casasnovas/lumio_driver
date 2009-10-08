@@ -1,5 +1,8 @@
 DESTDIR := /lib/modules/$(shell uname -r)
 
+PROJECT_NAME=lumio_driver
+PROJECT_VERSION=0.1
+
 all: lumio_driver
 
 lumio_driver:
@@ -23,6 +26,10 @@ install: all
 uninstall:
 	rmmod lumio_driver
 	rm $(DESTDIR)/misc/lumio_driver.ko
+
+tarball: clean
+	git archive --format=tar --prefix=$(PROJECT_NAME)-$(PROJECT_VERSION) HEAD > $(PROJECT_NAME)-$(PROJECT_VERSION).tar
+	bzip2 $(PROJECT_NAME)-$(PROJECT_VERSION).tar
 
 clean:
 	make -C src/ clean
