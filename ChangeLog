@@ -6,9 +6,11 @@
 
 	* TODO:
 		- Add support for next firmware version (Digitizer)
-		- Convert documentation to kernel-doc
+		- Convert documentation to kernel-doc (2h)
+		- Make a smart-guess of which cursor device the touch
+		belongs to (20min)
 		- Add support for activating/deactivating the controller
-		sound.
+		sound (1h).
 
 Copyright 2009 Quentin Casasnovas
 Copying and distribution of this file, with or without modification, are
