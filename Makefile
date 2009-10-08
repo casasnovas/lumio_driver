@@ -34,7 +34,7 @@ uninstall:
 	rm $(DESTDIR)/misc/lumio_driver.ko
 
 tarball:
-	git archive --format=tar --prefix=$(PROJECT_NAME)-$(PROJECT_VERSION)/ HEAD > $(PROJECT_NAME)-$(PROJECT_VERSION).tar
+	git archive --format=tar --prefix=$(PROJECT_NAME)-$(PROJECT_VERSION)/ master > $(PROJECT_NAME)-$(PROJECT_VERSION).tar
 	bzip2 $(PROJECT_NAME)-$(PROJECT_VERSION).tar
 
 clean:
