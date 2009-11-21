@@ -31,6 +31,7 @@
 # include <asm/uaccess.h>
 
 # include <linux/usb/input.h>
+# include <linux/smp_lock.h>
 # include <linux/kthread.h>
 # include <linux/kernel.h>
 # include <linux/module.h>
@@ -48,6 +49,7 @@
  * defines
  */
 
+
 /** @brief The USB Vendor ID of the device when in mouse mode. */
 # define USB_VID_MM		0x0556
 /** @brief The USB Vendor ID of the device when in driver mode. */
@@ -56,6 +58,16 @@
 # define USB_PID_MM		0x3556
 /** @brief The USB Product ID of the device when in driver mode. */
 # define USB_PID_DM		0x6956
+/** @brief The USB Vendor ID of Lumio (since firmware 2.0) */
+# define USB_VID_LUMIO		0x202E
+/** @brief The USB PID of the device when in driver mode (firmware 2.0). */
+# define USB_PID_DM_2_0			0x0001
+/** @brief The USB PID of the device when in mouse mode (firmware 2.0). */
+# define USB_PID_MM_2_0			0x0002
+/** @brief The USB PID of the device when in dualcontrol mode (firmware 2.0). */
+# define USB_PID_DUAL_CONTROL_2_0	0x0003
+/** @brief The USB PID of the device when in digitizer mode (firmware 2.0). */
+# define USB_PID_DIGITIZER_2_0		0x0004
 
 /** @brief The touch screen is in mouse mode. */
 # define USB_MOUSE_MODE		(1 << 0)
@@ -79,9 +91,15 @@
 # define LUMIO_OPERATION_DOWN	(1 << 0)
 # define LUMIO_OPERATION_UP	(1 << 1)
 
-# define LUMIO_TAGID_MASK		0xc
+# define LUMIO_TAGID_MASK	0xc
 # define LUMIO_TAGID_EVENT_ID1	(1 << 2)
 # define LUMIO_TAGID_EVENT_ID2	(1 << 3)
+
+# define LUMIO_FIRMWARE_1_0	0x01
+# define LUMIO_FIRMWARE_2_0	0x02
+
+# define LUMIO_SINGLE_EVENT	0
+# define LUMIO_DUAL_EVENT	1
 
 /*
  * macros
@@ -160,9 +178,17 @@
       set_bit(EV_KEY, (Inputdev)->evbit);				\
       set_bit(BTN_TOUCH, (Inputdev)->keybit);				\
       set_bit(EV_ABS, (Inputdev)->evbit);				\
-      input_set_abs_params((Inputdev), ABS_X, 0, 2047, 0, 0);		\
-      input_set_abs_params((Inputdev), ABS_Y, 0, 2047, 0, 0);		\
-      (Inputdev)->open = lumio_fake_open;					\
+      if (data->firmware_version == LUMIO_FIRMWARE_1_0)			\
+	{								\
+	  input_set_abs_params((Inputdev), ABS_X, 0, 2047, 0, 0);	\
+	  input_set_abs_params((Inputdev), ABS_Y, 0, 2047, 0, 0);	\
+	}								\
+      else if (data->firmware_version == LUMIO_FIRMWARE_2_0)		\
+	{								\
+	  input_set_abs_params((Inputdev), ABS_X, 0, 4095, 0, 0);	\
+	  input_set_abs_params((Inputdev), ABS_Y, 0, 4095, 0, 0);	\
+	}								\
+      (Inputdev)->open = lumio_fake_open;				\
       (Inputdev)->close = lumio_fake_close;				\
     } while (0);							
 /**
@@ -199,7 +225,8 @@
 typedef struct			usb_fakemouse
 {
   struct input_dev*		idev;
-  __u32				last_down;
+  __u16				last_x;
+  __u16				last_y;
 }				usb_fakemouse_t;
 
 /**
@@ -222,6 +249,7 @@ typedef struct			usb_touchscreen
   __u8				int_in_endpoint; /**< Interrupt endpoint of the device (In). */
   __u8				listeners; /**< Numbers of listeners of our fake mice events. */
   __u8				cur_mode; /**< The current mode of the device. */
+  __u8				firmware_version; /**< The firmware version of the controller. */
 }				usb_touchscreen_t;
 
 #endif /* !LUMIO_DRIVER__H_ */

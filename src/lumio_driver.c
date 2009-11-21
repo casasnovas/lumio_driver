@@ -45,7 +45,9 @@ static struct usb_device_id lumio_id_table[] __devinitdata =
   {
     {USB_DEVICE(USB_VID_MM, USB_PID_MM)},
     {USB_DEVICE(USB_VID_DM, USB_PID_DM)},
-    {}
+    {USB_DEVICE(USB_VID_LUMIO, USB_PID_DM_2_0)},
+    {USB_DEVICE(USB_VID_LUMIO, USB_PID_MM_2_0)},
+    {},
   };
 
 MODULE_DEVICE_TABLE(usb, lumio_id_table);
@@ -108,9 +110,7 @@ static void			lumio_delete(struct kref* refcount)
  * @param arg
  *	The parameter for each comand, authorized values, depending on the cmd
  * argument are :
- * - cmd = IOCTL_SET_DELAY_CLIC: A number in milliseconds * 10 in the interval
- *   in [1-9].
- * - cmd = IOCTL_SET_DELAY_DCLIC: Same as IOCTL_SET_DELAT_CLIC but for the
+ * - No commands are supported for now.
  * double clic.
  * @return 0 on success, a negative number on failure.
  */
@@ -137,10 +137,6 @@ static int			lumio_ioctl(struct inode*	inode,
 
   switch (cmd)
     {
-    case IOCTL_SET_SOUND_ON:
-      break;
-    case IOCTL_SET_SOUND_OFF:
-      break;
     default:
       printk(KERN_WARNING "lumio_driver: 0x%x unsupported ioctl command.\n", cmd);
       return (-EINVAL);
@@ -494,7 +490,7 @@ static int			lumio_fake_open(struct input_dev* dev)
  *	This function is called by the input layer when the last process has
  * released one of the two char devices that emulates mice. As there only one
  * touchscreen for two fake mice, we actually stops receiving urb only when the two
- * char devices are not readed anymore.
+ * char devices are not being red anymore.
  *
  * @param dev The input device that is not readed anymore.
  */
@@ -513,64 +509,93 @@ static void			lumio_fake_close(struct input_dev* dev)
   printk(KERN_INFO "lumio_driver: nb_listeners: %d\n", data->listeners);
 }
 
-static void			lumio_treat_first_event(struct usb_touchscreen* data)
+static void			lumio_which_finger(struct usb_touchscreen* data,
+						   __u8*	which,
+						   __u16	x,
+						   __u16	y)
 {
-  unsigned char*		event;
-  __u8				which;
+  __u32				distance_from_first_finger = 0;
+  __u32				distance_from_second_finger = 0;
+
+  ASSERT(data != NULL);
+  ASSERT(which != NULL);
+
+  distance_from_first_finger =
+    abs(data->fakemouse[0].last_x - x) + abs(data->fakemouse[0].last_y - y);
+  distance_from_second_finger =
+    abs(data->fakemouse[1].last_x - x) + abs(data->fakemouse[1].last_y - y);
+
+  if (distance_from_first_finger < distance_from_second_finger)
+    *which = 0;
+  else
+    *which = 1;
+}
+
+static void			lumio_treat_event(struct usb_touchscreen*	data,
+						  int				event_type)
+{
+  unsigned char*		event = NULL;
+  __u8				which = 0;
+  __u16				x = 0;
+  __u16				y = 0;
 
   ASSERT(data != NULL);
   ASSERT(data->in_buffer != NULL);
 
   event = data->in_buffer;
-  if (event[3] & LUMIO_TAGID_EVENT_ID1)
-    which = 0;
-  else
-    which = 1;
+  x = ((event[3] >> 4) << 8) | event[4];
+  y = ((event[6] & 0xf) << 8) | event[5];
 
-  /* input_report_key(data->fakemouse[which].idev, */
-  /* 		   BTN_TOUCH, */
-  /* 		   1); */
+  lumio_which_finger(data, &which, x, y);
+
+  /* This commented code below better works with synaptics xorg driver */
   input_report_key(data->fakemouse[which].idev,
   		   BTN_TOUCH,
-  		   !!!((event[3] & LUMIO_OPERATION_MASK) & LUMIO_OPERATION_UP));
-  input_report_abs(data->fakemouse[which].idev,
-		   ABS_X,
-		   ((event[3] >> 4) << 8) | event[4]);
-  input_report_abs(data->fakemouse[which].idev,
-		   ABS_Y,
-		   ((event[6] & 0xf) << 8) | event[5]);
-  input_sync(data->fakemouse[which].idev);
-}
+  		   1);
 
-static void			lumio_treat_second_event(struct usb_touchscreen* data)
-{
-  unsigned char*		event;
-  __u8				which;
-
-  ASSERT(data != NULL);
-  ASSERT(data->in_buffer != NULL);
-
-  event = data->in_buffer;
-  if (event[9] & (LUMIO_TAGID_EVENT_ID1 << 4))
-    which = 0;
-  else
-    which = 1;
-
+  /* This one better works with evdev xorg driver */
   /* input_report_key(data->fakemouse[which].idev, */
   /* 		   BTN_TOUCH, */
-  /* 		   1); */
-  input_report_key(data->fakemouse[which].idev,
-  		   BTN_TOUCH,
-  		   !!!((event[9] >> 4) & LUMIO_OPERATION_UP));
-  input_report_abs(data->fakemouse[which].idev,
-		   ABS_X,
-		   ((event[11] & 0xf) << 8) | event[10]);
-  input_report_abs(data->fakemouse[which].idev,
-		   ABS_Y,
-		   ((event[11] >> 4) << 8) | event[12]);
-  input_sync(data->fakemouse[which].idev);
-}
+  /* 		   !!!((event[3] & LUMIO_OPERATION_MASK) & LUMIO_OPERATION_UP)); */
 
+  /* The code below shouldn't change between xorg drivers. */
+  input_report_abs(data->fakemouse[which].idev,
+		   ABS_X, x);
+  input_report_abs(data->fakemouse[which].idev,
+		   ABS_Y, y);
+  data->fakemouse[which].last_x = x;
+  data->fakemouse[which].last_y = y;
+  printk(KERN_INFO "lumio_driver: id: %d (%d, %d)\n", which, x, y);
+  input_sync(data->fakemouse[which].idev);
+
+  if (event_type == LUMIO_DUAL_EVENT)
+    {
+      x = ((event[11] & 0xf) << 8) | event[10];
+      y = ((event[11] >> 4) << 8) | event[12];
+      which = !which;
+      printk(KERN_INFO "lumio_driver: id: %d (%d, %d)\n", which, x, y);
+
+      /* This code better works with synaptics xorg driver */
+      input_report_key(data->fakemouse[which].idev,
+      		       BTN_TOUCH,
+      		       1);
+
+      /* This one better works with evdev xorg driver */
+      /* input_report_key(data->fakemouse[which].idev, */
+      /* 		       BTN_TOUCH, */
+      /* 		       !!!((event[9] >> 4) & LUMIO_OPERATION_UP)); */
+
+      /* The code below shouldn't change between xorg drivers. */
+      input_report_abs(data->fakemouse[which].idev,
+		       ABS_X, x);
+      input_report_abs(data->fakemouse[which].idev,
+		       ABS_Y, y);
+      data->fakemouse[which].last_x = x;
+      data->fakemouse[which].last_y = y;
+      input_sync(data->fakemouse[which].idev);
+    }
+
+}
 
 /**
  * @brief Reports events from the touchscreen to the kernel input layer.
@@ -609,9 +634,14 @@ static void			lumio_irq2(struct urb* urb)
 
   data = urb->context;
 
-  lumio_treat_first_event(data);
+  PRINT_BUFF(data->in_buffer, "1st urb");
+  PRINT_BUFF(data->in_buffer + 8, "2nd urb");
+
   if (data->in_buffer[2] == 0x0d)
-    lumio_treat_second_event(data);
+    lumio_treat_event(data, LUMIO_DUAL_EVENT);
+  else
+    lumio_treat_event(data, LUMIO_SINGLE_EVENT);
+
   usb_submit_urb(data->urb_in, GFP_ATOMIC);
 }
 
@@ -731,15 +761,30 @@ static int __devinit		lumio_probe(struct usb_interface*		interface,
 
   SAFE_CALL(lumio_find_endpoints(data), "Cannot find endpoints.\n");
 
-  if (entity->idVendor == USB_VID_MM &&
-      entity->idProduct == USB_PID_MM)
+  if (entity->idVendor != USB_VID_LUMIO)
+    {
+      data->firmware_version = LUMIO_FIRMWARE_1_0;
+      printk(KERN_INFO "lumio_driver: firmware 1.0 detected. Probing mode...\n");
+    }
+  else
+    {
+      data->firmware_version = LUMIO_FIRMWARE_2_0;
+      printk(KERN_INFO "lumio_driver: firmware 2.0 detected. Probing mode...\n");
+    }
+
+  if ((entity->idVendor == USB_VID_MM &&
+       entity->idProduct == USB_PID_MM) ||
+      (entity->idVendor == USB_VID_LUMIO &&
+       entity->idProduct == USB_PID_MM_2_0))
     {
       printk(KERN_INFO "lumio_driver: Mouse mode.\n");
       SAFE_CALL(lumio_switch_to_driver_mode(data),
 		"Cannot switch to driver mode.\n");
     }
-  else if (entity->idVendor == USB_VID_DM &&
-	   entity->idProduct == USB_PID_DM)
+  else if ((entity->idVendor == USB_VID_DM &&
+	    entity->idProduct == USB_PID_DM) ||
+	   (entity->idVendor == USB_VID_LUMIO &&
+	    entity->idProduct == USB_PID_DM_2_0))
     {
       printk(KERN_INFO "lumio_driver: Driver mode.\n");
       SAFE_CALL(usb_register_dev(interface, &lumio_class),
