@@ -511,8 +511,8 @@ static void			lumio_fake_close(struct input_dev* dev)
 
 static void			lumio_which_finger(struct usb_touchscreen* data,
 						   __u8*	which,
-						   __u16	x,
-						   __u16	y)
+						   __u32	x,
+						   __u32	y)
 {
   __u32				distance_from_first_finger = 0;
   __u32				distance_from_second_finger = 0;
@@ -536,8 +536,8 @@ static void			lumio_treat_event(struct usb_touchscreen*	data,
 {
   unsigned char*		event = NULL;
   __u8				which = 0;
-  __u16				x = 0;
-  __u16				y = 0;
+  __u32				x = 0;
+  __u32				y = 0;
 
   ASSERT(data != NULL);
   ASSERT(data->in_buffer != NULL);
@@ -549,14 +549,14 @@ static void			lumio_treat_event(struct usb_touchscreen*	data,
   lumio_which_finger(data, &which, x, y);
 
   /* This commented code below better works with synaptics xorg driver */
-  input_report_key(data->fakemouse[which].idev,
-  		   BTN_TOUCH,
-  		   1);
-
-  /* This one better works with evdev xorg driver */
   /* input_report_key(data->fakemouse[which].idev, */
   /* 		   BTN_TOUCH, */
-  /* 		   !!!((event[3] & LUMIO_OPERATION_MASK) & LUMIO_OPERATION_UP)); */
+  /* 		   1); */
+
+  /* This one better works with evdev xorg driver */
+  input_report_key(data->fakemouse[which].idev,
+  		   BTN_TOUCH,
+  		   !!!((event[3] & LUMIO_OPERATION_MASK) & LUMIO_OPERATION_UP));
 
   /* The code below shouldn't change between xorg drivers. */
   input_report_abs(data->fakemouse[which].idev,
@@ -565,7 +565,17 @@ static void			lumio_treat_event(struct usb_touchscreen*	data,
 		   ABS_Y, y);
   data->fakemouse[which].last_x = x;
   data->fakemouse[which].last_y = y;
-  printk(KERN_INFO "lumio_driver: id: %d (%d, %d)\n", which, x, y);
+
+#ifdef _DEBUG
+  PRINT_BUFF(data->in_buffer, "1st urb");
+  printk(KERN_INFO "lumio_driver:    Fingers[%d](x, y) = (%d, %d)\n", which, x, y);
+
+  if (event_type == LUMIO_DUAL_EVENT)
+    printk(KERN_INFO "lumio_driver:    Event type: Dual touch event\n");
+  else
+    printk(KERN_INFO "lumio_driver:    Event type: single touch event\n");
+#endif
+
   input_sync(data->fakemouse[which].idev);
 
   if (event_type == LUMIO_DUAL_EVENT)
@@ -573,17 +583,21 @@ static void			lumio_treat_event(struct usb_touchscreen*	data,
       x = ((event[11] & 0xf) << 8) | event[10];
       y = ((event[11] >> 4) << 8) | event[12];
       which = !which;
-      printk(KERN_INFO "lumio_driver: id: %d (%d, %d)\n", which, x, y);
+
+#ifdef _DEBUG
+      PRINT_BUFF(data->in_buffer + 8, "2nd urb");
+      printk(KERN_INFO "lumio_driver:    Fingers[%d](x, y) = (%d, %d)\n", which, x, y);
+#endif
 
       /* This code better works with synaptics xorg driver */
-      input_report_key(data->fakemouse[which].idev,
-      		       BTN_TOUCH,
-      		       1);
-
-      /* This one better works with evdev xorg driver */
       /* input_report_key(data->fakemouse[which].idev, */
       /* 		       BTN_TOUCH, */
-      /* 		       !!!((event[9] >> 4) & LUMIO_OPERATION_UP)); */
+      /* 		       1); */
+
+      /* This one better works with evdev xorg driver */
+      input_report_key(data->fakemouse[which].idev,
+      		       BTN_TOUCH,
+      		       !!!((event[9] >> 4) & LUMIO_OPERATION_UP));
 
       /* The code below shouldn't change between xorg drivers. */
       input_report_abs(data->fakemouse[which].idev,
@@ -633,9 +647,6 @@ static void			lumio_irq2(struct urb* urb)
     return;
 
   data = urb->context;
-
-  PRINT_BUFF(data->in_buffer, "1st urb");
-  PRINT_BUFF(data->in_buffer + 8, "2nd urb");
 
   if (data->in_buffer[2] == 0x0d)
     lumio_treat_event(data, LUMIO_DUAL_EVENT);
@@ -797,6 +808,8 @@ static int __devinit		lumio_probe(struct usb_interface*		interface,
 
       SAFE_CALL(lumio_init_data(data),
 		"Unable to allocate input devices (fakemice).\n");
+
+      printk(KERN_INFO "lumio_driver: Set to dual control.\n");
     }
   else
     {
