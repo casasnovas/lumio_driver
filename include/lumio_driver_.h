@@ -68,6 +68,11 @@
 # define USB_PID_DUAL_CONTROL_2_0	0x0003
 /** @brief The USB PID of the device when in digitizer mode (firmware 2.0). */
 # define USB_PID_DIGITIZER_2_0		0x0004
+/** @brief The USB PID of the device when in dual mode mode (firmware 3.0). */
+# define USB_PID_DUAL_MODE_3_0		0x0005
+/** @brief The USB PID of the device when in 4 sensors mode mode (firmware 3.0). */
+# define USB_PID_4_SENSORS_3_0		0x0006
+
 
 /** @brief The touch screen is in mouse mode. */
 # define USB_MOUSE_MODE		(1 << 0)
@@ -97,6 +102,8 @@
 
 # define LUMIO_FIRMWARE_1_0	0x01
 # define LUMIO_FIRMWARE_2_0	0x02
+# define LUMIO_FIRMWARE_3_0	0x03
+
 
 # define LUMIO_SINGLE_EVENT	0
 # define LUMIO_DUAL_EVENT	1
@@ -169,21 +176,22 @@
  * @param Inputdev The input_dev struct to initialize.
  * @param Data The touchscreen.
  */
-# define INIT_FAKEMOUSE(Inputdev, Data)					\
+# define INIT_FAKEMOUSE(Inputdev, Data, Name)				\
   do									\
     {									\
-      (Inputdev)->name = idev_name;					\
+      (Inputdev)->name = (Name);					\
       input_set_drvdata((Inputdev), (Data));				\
       usb_to_input_id((Data)->udev, &(Inputdev)->id);			\
       set_bit(EV_KEY, (Inputdev)->evbit);				\
-      set_bit(BTN_TOUCH, (Inputdev)->keybit);				\
+      set_bit(BTN_LEFT, (Inputdev)->keybit);				\
       set_bit(EV_ABS, (Inputdev)->evbit);				\
       if (data->firmware_version == LUMIO_FIRMWARE_1_0)			\
 	{								\
 	  input_set_abs_params((Inputdev), ABS_X, 0, 2047, 0, 0);	\
 	  input_set_abs_params((Inputdev), ABS_Y, 0, 2047, 0, 0);	\
 	}								\
-      else if (data->firmware_version == LUMIO_FIRMWARE_2_0)		\
+      else if (data->firmware_version == LUMIO_FIRMWARE_2_0 ||		\
+	       data->firmware_version == LUMIO_FIRMWARE_3_0)		\
 	{								\
 	  input_set_abs_params((Inputdev), ABS_X, 0, 4095, 0, 0);	\
 	  input_set_abs_params((Inputdev), ABS_Y, 0, 4095, 0, 0);	\
@@ -242,6 +250,7 @@ typedef struct			usb_touchscreen
   struct usb_device*		udev; /**< Usb device registered to the driver. */
   struct urb*			urb_in; /**< A urb to communicate with the controller. */
   struct urb*			urb_in2;
+  struct urb*			urb_commander;
   struct kref			refcount; /**< Reference counter. */
   unsigned char*		out_buffer; /**< Buffer used to send data to ts. */
   unsigned char*		in_buffer; /**< Buffer used to retreive data from ts. */
@@ -250,6 +259,9 @@ typedef struct			usb_touchscreen
   __u8				listeners; /**< Numbers of listeners of our fake mice events. */
   __u8				cur_mode; /**< The current mode of the device. */
   __u8				firmware_version; /**< The firmware version of the controller. */
+
+  int				(*send_msg)(struct usb_touchscreen*, unsigned int);
+  int				(*recv_msg)(struct usb_touchscreen*, unsigned int);
 }				usb_touchscreen_t;
 
 #endif /* !LUMIO_DRIVER__H_ */

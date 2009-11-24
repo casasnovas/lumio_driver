@@ -52,7 +52,7 @@ static void select_events(Display *dpy, Window win)
     /* select for button and key events from all master devices */
     XISetMask(mask1, XI_Motion);
 
-    evmasks[0].deviceid = XIAllMasterDevices;
+    evmasks[0].deviceid = XIAllDevices;
     evmasks[0].mask_len = sizeof(mask1);
     evmasks[0].mask = mask1;
 
@@ -72,12 +72,13 @@ static GC init_gc(Display* dpy, Window win)
 
 int	main(int argc, char **argv)
 {
-  unsigned int	x[15], y[15];
+  unsigned int	x[25], y[25];
   int		xi_opcode, event, error;
   Display	*dpy;
   Window	win;
   XEvent	ev;
   GC		gc;
+  unsigned int	counter = 0;
 
   dpy = XOpenDisplay(NULL);
   if (!dpy)
@@ -98,8 +99,8 @@ int	main(int argc, char **argv)
   select_events(dpy, win);
   gc = init_gc(dpy, win);
 
-  memset(x, 0x0, 15 * sizeof(int));
-  memset(y, 0x0, 15 * sizeof(int));
+  memset(x, 0x0, 25 * sizeof(int));
+  memset(y, 0x0, 25 * sizeof(int));
 
   while(1)
     {
@@ -108,16 +109,17 @@ int	main(int argc, char **argv)
       XNextEvent(dpy, &ev);
 
       if (cookie->type != GenericEvent ||
-	  cookie->extension != xi_opcode)
-	continue;
+      	  cookie->extension != xi_opcode)
+      	continue;
 
       if (XGetEventData(dpy, cookie))
 	{
 	  if (cookie->evtype == XI_Motion)
 	    {
+	      
 	      real_ev = cookie->data;
-	      printf("W x: %f, y: %f, id: %d\n", real_ev->event_x, real_ev->event_y, real_ev->deviceid);
-	      printf("R x: %f, y: %f, id: %d\n", real_ev->root_x, real_ev->root_y, real_ev->deviceid);
+	      /* printf("W x: %f, y: %f, id: %d\n", real_ev->event_x, real_ev->event_y, real_ev->deviceid); */
+	      /* printf("R x: %f, y: %f, id: %d\n", real_ev->root_x, real_ev->root_y, real_ev->deviceid); */
 
 	      if (x[real_ev->deviceid] == 0 && y[real_ev->deviceid] == 0)
 	      	{
@@ -131,13 +133,18 @@ int	main(int argc, char **argv)
 	      		    real_ev->event_x, real_ev->event_y);
 	      	  x[real_ev->deviceid] = real_ev->event_x;
 	      	  y[real_ev->deviceid] = real_ev->event_y;
-	      	  XFlush(dpy);
 	      	}
 	    }
 	  else
 	    printf("What's this event ? :%d\n", cookie->evtype);
 	  XFreeEventData(dpy, &ev.xcookie);
 	}
+      if (counter == 100)
+	{
+	  XFlush(dpy);
+	  counter = 0;
+	}
+      ++counter;
     }
 
   XFreeGC(dpy, gc);

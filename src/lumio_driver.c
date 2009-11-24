@@ -37,6 +37,8 @@
 
 #include "lumio_driver_.h"
 
+#define LUMIO_DEBUG 1
+
 MODULE_DESCRIPTION("USB lumio multi-touchscreen driver");
 MODULE_AUTHOR("Quentin Casasnovas");
 MODULE_LICENSE("GPL");
@@ -47,6 +49,8 @@ static struct usb_device_id lumio_id_table[] __devinitdata =
     {USB_DEVICE(USB_VID_DM, USB_PID_DM)},
     {USB_DEVICE(USB_VID_LUMIO, USB_PID_DM_2_0)},
     {USB_DEVICE(USB_VID_LUMIO, USB_PID_MM_2_0)},
+    {USB_DEVICE(USB_VID_LUMIO, USB_PID_DUAL_MODE_3_0)},
+    {USB_DEVICE(USB_VID_LUMIO, USB_PID_4_SENSORS_3_0)},
     {},
   };
 
@@ -54,7 +58,8 @@ MODULE_DEVICE_TABLE(usb, lumio_id_table);
 
 static struct usb_driver lumio_driver;
 
-const char*	idev_name = "Lumio touchscreen";
+const char*	idev_name1 = "Lumio touchscreen1";
+const char*	idev_name2 = "Lumio touchscreen2";
 
 /**
  * @brief Destructor of this driver private data.
@@ -249,6 +254,46 @@ static struct usb_class_driver	lumio_class =
     .minor_base	= 0,
   };
 
+static int		lumio_send_8_bytes(struct usb_touchscreen*	data,
+					   unsigned int			hid_type)
+{
+  printk(KERN_INFO "lumio_driver: send_8_bytes fired!\n");
+  return (usb_control_msg(data->udev,
+			  usb_sndctrlpipe(data->udev, 0),
+			  HID_REQ_SET_REPORT,
+			  USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+			  hid_type,
+			  0, data->out_buffer, 8, 0));
+}
+
+static void		lumio_send_64_aknowledged(struct urb* urb)
+{
+  struct usb_touchscreen*	data = NULL;
+
+  ASSERT(urb != NULL);
+  ASSERT(urb->context != NULL);
+
+  data = urb->context;
+};
+
+static int		lumio_send_64_bytes(struct usb_touchscreen*	data,
+					    unsigned int		hid_type)
+{
+  printk(KERN_INFO "lumio_driver: send_64_bytes fired!\n");
+  return (usb_submit_urb(data->urb_commander, GFP_KERNEL));
+}
+
+static int		lumio_recv_8_bytes(struct usb_touchscreen*	data,
+					    unsigned int		hid_type)
+{
+  return (usb_control_msg(data->udev,
+			  usb_rcvctrlpipe(data->udev, 0),
+			  HID_REQ_GET_REPORT,
+			  USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+			  hid_type,
+			  0, data->in_buffer, 8, 0));
+}
+
 /**
  * @brief Tells the controller to switch to driver mode.
  *
@@ -273,12 +318,7 @@ static int		lumio_switch_to_driver_mode(struct usb_touchscreen* data)
   data->out_buffer[0] = 0x75;
   data->out_buffer[1] = 0x76;
 
-  SAFE_CALL(usb_control_msg(data->udev,
-			    usb_sndctrlpipe(data->udev, 0),
-			    HID_REQ_SET_REPORT,
-			    USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-			    HID_VAL_FEATURE,
-			    0, data->out_buffer, 8, 0),
+  SAFE_CALL(data->send_msg(data, HID_VAL_FEATURE),
 	    "Unable to send control urb.\n");
 
   return (0);
@@ -315,24 +355,19 @@ static int	lumio_actual_conf(struct usb_touchscreen* data)
   data->out_buffer[0] = 0x7F;
   data->out_buffer[1] = 0x9B;
 
-  SAFE_CALL(usb_control_msg(data->udev,
-			    usb_sndctrlpipe(data->udev, 0),
-			    HID_REQ_SET_REPORT,
-			    USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-			    HID_VAL_OUTPUT,
-			    0, data->out_buffer, 0x08, 0),
-	    "Unable to ask actual configuration.\n");
-
-  mdelay(50);
-
-  memset(data->in_buffer, 0x0, 16);
-  SAFE_CALL(usb_control_msg(data->udev,
-			    usb_rcvctrlpipe(data->udev, 0),
-			    HID_REQ_GET_REPORT,
-			    USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-			    HID_VAL_INPUT,
-			    0, data->in_buffer, 0x10, 0),
-	    "Unable to receive actual configuration.\n");
+  if (data->firmware_version != LUMIO_FIRMWARE_3_0)
+    {
+      SAFE_CALL(data->send_msg(data, HID_REQ_SET_REPORT),
+		"Unable to ask actual configuration.\n");
+      
+      mdelay(50);
+      
+      memset(data->in_buffer, 0x0, 16);
+      SAFE_CALL(data->recv_msg(data, HID_REQ_GET_REPORT),
+		"Unable to receive actual configuration.\n");
+    }
+  else
+    return (USB_DUALTOUCH_CONFIG);
 
   if (data->in_buffer[3] == 0x01)
     return (USB_DUALTOUCH_CONFIG);
@@ -362,37 +397,28 @@ static int	lumio_actual_conf(struct usb_touchscreen* data)
 static int	lumio_switch_to_dualtouch_mode(struct usb_touchscreen* data)
 {
   int		nb_try = 0;
-  int		ret = 0;
 
   ASSERT(data != NULL);
   ASSERT(data->out_buffer != NULL);
 
-  for (nb_try = 0;
-       nb_try < 3 &&
-	 lumio_actual_conf(data) == USB_SINGLETOUCH_CONFIG;
-       ++nb_try)
+  do
     {
-      memset(data->out_buffer, 0x0, 8);
+      memset(data->out_buffer, 0x0, 64);
       data->out_buffer[0] = 0x7F;
       data->out_buffer[1] = 0x9B;
       data->out_buffer[2] = 0x01;
       data->out_buffer[3] = 0x01;
+      if (data->send_msg(data, HID_REQ_SET_REPORT) != 0)
+	printk(KERN_INFO "lumio_driver: Can't set to dual touch mode... Retrying.\n");
 
-      SAFE_CALL(usb_control_msg(data->udev,
-				usb_sndctrlpipe(data->udev, 0),
-				HID_REQ_SET_REPORT,
-				USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-				HID_VAL_INPUT,
-				0, data->out_buffer, 8, 0),
-		"Unable to ask for dualtouch configuration.\n");
       mdelay(10);
-    }
+      ++nb_try;
+    } while (nb_try < 3 && lumio_actual_conf(data) == USB_SINGLETOUCH_CONFIG);
+
+  if (nb_try == 3)
+    return (-ENODEV);
 
   return (0);
-
- error:
-
-  return (ret);
 }
 
 /**
@@ -445,6 +471,8 @@ static int				lumio_find_endpoints(struct usb_touchscreen* data)
 	       IS_INT_ENDPOINT(endpoint->bmAttributes))
 	{
 	  data->int_out_endpoint = endpoint->bEndpointAddress;
+	  printk(KERN_INFO "lumio_driver: Out interrupt endpoint adress is: %d.\n",
+		 data->int_out_endpoint);
 	}
     }
 
@@ -546,17 +574,21 @@ static void			lumio_treat_event(struct usb_touchscreen*	data,
   x = ((event[3] >> 4) << 8) | event[4];
   y = ((event[6] & 0xf) << 8) | event[5];
 
-  lumio_which_finger(data, &which, x, y);
+  /* lumio_which_finger(data, &which, x, y); */
 
-  /* This commented code below better works with synaptics xorg driver */
-  /* input_report_key(data->fakemouse[which].idev, */
-  /* 		   BTN_TOUCH, */
-  /* 		   1); */
+  if ((event[3] & (1 << 2)) == (1 << 2))
+    which = 0;
+  else
+    which = 1;
+
+  printk(KERN_INFO "lumio_driver: WHICH: %d\n", which);
 
   /* This one better works with evdev xorg driver */
   input_report_key(data->fakemouse[which].idev,
-  		   BTN_TOUCH,
-  		   !!!((event[3] & LUMIO_OPERATION_MASK) & LUMIO_OPERATION_UP));
+		   BTN_LEFT, 0);
+  /* input_report_key(data->fakemouse[which].idev, */
+  /* 		   BTN_TOUCH, */
+  /* 		   !!!((event[3] & LUMIO_OPERATION_MASK) & LUMIO_OPERATION_UP)); */
 
   /* The code below shouldn't change between xorg drivers. */
   input_report_abs(data->fakemouse[which].idev,
@@ -566,15 +598,17 @@ static void			lumio_treat_event(struct usb_touchscreen*	data,
   data->fakemouse[which].last_x = x;
   data->fakemouse[which].last_y = y;
 
-#ifdef _DEBUG
-  PRINT_BUFF(data->in_buffer, "1st urb");
-  printk(KERN_INFO "lumio_driver:    Fingers[%d](x, y) = (%d, %d)\n", which, x, y);
-
   if (event_type == LUMIO_DUAL_EVENT)
     printk(KERN_INFO "lumio_driver:    Event type: Dual touch event\n");
   else
     printk(KERN_INFO "lumio_driver:    Event type: single touch event\n");
-#endif
+
+  PRINT_BUFF(data->in_buffer, "first 8bytes");
+  printk(KERN_INFO "lumio_driver:    Fingers[%d](x, y) = (%d, %d)\n", which, x, y);
+  if (!!!((event[3] & LUMIO_OPERATION_MASK) & LUMIO_OPERATION_UP))
+    printk(KERN_INFO "lumio_driver:    Operation: DOWN.\n");
+  else
+    printk(KERN_INFO "lumio_driver:    Operation: UP.\n");
 
   input_sync(data->fakemouse[which].idev);
 
@@ -582,22 +616,27 @@ static void			lumio_treat_event(struct usb_touchscreen*	data,
     {
       x = ((event[11] & 0xf) << 8) | event[10];
       y = ((event[11] >> 4) << 8) | event[12];
-      which = !which;
 
-#ifdef _DEBUG
-      PRINT_BUFF(data->in_buffer + 8, "2nd urb");
+      if ((event[9] & (1 << 6)) == (1 << 6))
+	which = 0;
+      else
+	which = 1;
+
+      printk(KERN_INFO "lumio_driver: WHICH: %d\n", which);
+  
+      PRINT_BUFF(data->in_buffer + 8, "2nd 8bytes");
       printk(KERN_INFO "lumio_driver:    Fingers[%d](x, y) = (%d, %d)\n", which, x, y);
-#endif
-
-      /* This code better works with synaptics xorg driver */
-      /* input_report_key(data->fakemouse[which].idev, */
-      /* 		       BTN_TOUCH, */
-      /* 		       1); */
+      if (!!!((event[9] >> 4) & LUMIO_OPERATION_UP))
+	printk(KERN_INFO "lumio_driver:    Operation: DOWN.\n");
+      else
+	printk(KERN_INFO "lumio_driver:    Operation: UP.\n");
 
       /* This one better works with evdev xorg driver */
       input_report_key(data->fakemouse[which].idev,
-      		       BTN_TOUCH,
-      		       !!!((event[9] >> 4) & LUMIO_OPERATION_UP));
+      		       BTN_LEFT, 0);
+      /* input_report_key(data->fakemouse[which].idev, */
+      /* 		       BTN_LEFT, */
+      /* 		       !!!((event[9] >> 4) & LUMIO_OPERATION_UP)); */
 
       /* The code below shouldn't change between xorg drivers. */
       input_report_abs(data->fakemouse[which].idev,
@@ -608,7 +647,6 @@ static void			lumio_treat_event(struct usb_touchscreen*	data,
       data->fakemouse[which].last_y = y;
       input_sync(data->fakemouse[which].idev);
     }
-
 }
 
 /**
@@ -632,8 +670,19 @@ static void			lumio_irq1(struct urb* urb)
   if (urb->status != 0)
     return;
 
+  printk(KERN_INFO "lumio_driver: IRQ1 fired!\n");
+
   data = urb->context;
-  usb_submit_urb(data->urb_in2, GFP_ATOMIC);
+  if (data->firmware_version != LUMIO_FIRMWARE_3_0)
+    usb_submit_urb(data->urb_in2, GFP_ATOMIC);
+  else
+    {
+      if (data->in_buffer[2] == 0x0d)
+	lumio_treat_event(data, LUMIO_DUAL_EVENT);
+      else
+	lumio_treat_event(data, LUMIO_SINGLE_EVENT);
+      usb_submit_urb(data->urb_in, GFP_ATOMIC);
+    }
 }
 
 static void			lumio_irq2(struct urb* urb)
@@ -667,30 +716,55 @@ static void			lumio_irq2(struct urb* urb)
  */
 static int		lumio_init_data(struct usb_touchscreen* data)
 {
+  int interval = 0;
+
   ASSERT(data != NULL);
 
   if (!(data->urb_in = usb_alloc_urb(0, GFP_KERNEL)))
     goto error;
-  if (!(data->urb_in2 = usb_alloc_urb(0, GFP_KERNEL)))
-    goto error;
-  usb_fill_int_urb(data->urb_in, data->udev,
-		   usb_rcvintpipe(data->udev, data->int_in_endpoint),
-		   data->in_buffer,
-		   0x08, lumio_irq1,
-		   data, 10);
-  usb_fill_int_urb(data->urb_in2, data->udev,
-		   usb_rcvintpipe(data->udev, data->int_in_endpoint),
-		   data->in_buffer + 8,
-		   0x08, lumio_irq2,
-		   data, 10);
 
+  if (data->firmware_version == LUMIO_FIRMWARE_3_0)
+    {
+      interval = 2;
+      if (!(data->urb_commander = usb_alloc_urb(0, GFP_KERNEL)))
+	goto error;
+      
+      usb_fill_int_urb(data->urb_commander, data->udev,
+		       usb_sndintpipe(data->udev, data->int_out_endpoint),
+		       data->out_buffer,
+		       64, lumio_send_64_aknowledged,
+		       data, interval);
+      usb_fill_int_urb(data->urb_in, data->udev,
+		       usb_rcvintpipe(data->udev, data->int_in_endpoint),
+		       data->in_buffer,
+		       64, lumio_irq1,
+		       data, interval);
+    }
+  else
+    {
+      interval = 10;
+      if (!(data->urb_in2 = usb_alloc_urb(0, GFP_KERNEL)))
+	goto error;
+
+      usb_fill_int_urb(data->urb_in, data->udev,
+		       usb_rcvintpipe(data->udev, data->int_in_endpoint),
+		       data->in_buffer,
+		       0x08, lumio_irq1,
+		       data, interval);
+      usb_fill_int_urb(data->urb_in2, data->udev,
+		       usb_rcvintpipe(data->udev, data->int_in_endpoint),
+		       data->in_buffer + 8,
+		       0x08, lumio_irq2,
+		       data, interval);
+
+    }
 
   if (!(data->fakemouse[0].idev = input_allocate_device()))
     goto error;
   if (!(data->fakemouse[1].idev = input_allocate_device()))
     goto error1;
-  INIT_FAKEMOUSE(data->fakemouse[0].idev, data);
-  INIT_FAKEMOUSE(data->fakemouse[1].idev, data);
+  INIT_FAKEMOUSE(data->fakemouse[0].idev, data, idev_name1);
+  INIT_FAKEMOUSE(data->fakemouse[1].idev, data, idev_name2);
   if (input_register_device(data->fakemouse[0].idev))
     goto error2;
   if (input_register_device(data->fakemouse[1].idev))
@@ -710,6 +784,39 @@ static int		lumio_init_data(struct usb_touchscreen* data)
   data->fakemouse[0].idev = NULL;
  error:
   return (-ENOMEM);
+}
+
+static int	lumio_probe_firmware(usb_touchscreen_t*			data,
+			     const struct usb_device_id*	entity)
+{
+ if (entity->idVendor != USB_VID_LUMIO)
+    {
+      data->firmware_version = LUMIO_FIRMWARE_1_0;
+      if (entity->idProduct == USB_PID_DM)
+	data->cur_mode = USB_DRIVER_MODE;
+    }
+  else
+    {
+      switch (entity->idProduct)
+	{
+	case USB_PID_DM_2_0:
+	  data->cur_mode = USB_DRIVER_MODE;
+	case USB_PID_MM_2_0:
+	  data->send_msg = lumio_send_8_bytes;
+	  data->firmware_version = LUMIO_FIRMWARE_2_0;
+	  break;
+	case USB_PID_DUAL_MODE_3_0:
+	case USB_PID_4_SENSORS_3_0:
+	  data->send_msg = lumio_send_64_bytes;
+	  data->firmware_version = LUMIO_FIRMWARE_3_0;
+	  break;
+	default:
+	  return (-ENODEV);
+	  break;
+	}
+    }
+
+ return (0);
 }
 
 /**
@@ -740,8 +847,8 @@ static int		lumio_init_data(struct usb_touchscreen* data)
  * @param entity
  * @return 0 on success, a negative number on failure.
  */
-static int __devinit		lumio_probe(struct usb_interface*		interface,
-					 const struct usb_device_id*	entity)
+static int __devinit		lumio_probe(struct usb_interface*	interface,
+					    const struct usb_device_id*	entity)
 {
   int				ret = 0;
   struct usb_touchscreen*			data;
@@ -761,8 +868,9 @@ static int __devinit		lumio_probe(struct usb_interface*		interface,
   data->udev = usb_get_dev(interface_to_usbdev(interface));
   data->interface = interface;
   data->cur_mode = USB_MOUSE_MODE;
-  data->in_buffer = kzalloc(16, GFP_KERNEL);
-  data->out_buffer = kzalloc(8, GFP_KERNEL);
+  data->in_buffer = kzalloc(64, GFP_KERNEL);
+  data->out_buffer = kzalloc(64, GFP_KERNEL);
+  data->recv_msg = lumio_recv_8_bytes;
   if (!data->in_buffer || !data->out_buffer)
     {
       printk(KERN_WARNING "lumio_driver: unable to allocate interrupt in buffer.\n");
@@ -772,49 +880,33 @@ static int __devinit		lumio_probe(struct usb_interface*		interface,
 
   SAFE_CALL(lumio_find_endpoints(data), "Cannot find endpoints.\n");
 
-  if (entity->idVendor != USB_VID_LUMIO)
-    {
-      data->firmware_version = LUMIO_FIRMWARE_1_0;
-      printk(KERN_INFO "lumio_driver: firmware 1.0 detected. Probing mode...\n");
-    }
-  else
-    {
-      data->firmware_version = LUMIO_FIRMWARE_2_0;
-      printk(KERN_INFO "lumio_driver: firmware 2.0 detected. Probing mode...\n");
-    }
+  SAFE_CALL(lumio_probe_firmware(data, entity),
+	    "Device not supported.\n");
 
-  if ((entity->idVendor == USB_VID_MM &&
-       entity->idProduct == USB_PID_MM) ||
-      (entity->idVendor == USB_VID_LUMIO &&
-       entity->idProduct == USB_PID_MM_2_0))
+  switch (data->firmware_version)
     {
-      printk(KERN_INFO "lumio_driver: Mouse mode.\n");
-      SAFE_CALL(lumio_switch_to_driver_mode(data),
-		"Cannot switch to driver mode.\n");
-    }
-  else if ((entity->idVendor == USB_VID_DM &&
-	    entity->idProduct == USB_PID_DM) ||
-	   (entity->idVendor == USB_VID_LUMIO &&
-	    entity->idProduct == USB_PID_DM_2_0))
-    {
+    case LUMIO_FIRMWARE_1_0:
+    case LUMIO_FIRMWARE_2_0:
+      if (data->cur_mode == USB_MOUSE_MODE)
+	{
+	  printk(KERN_INFO "lumio_driver: Mouse mode.\n");
+	  SAFE_CALL(lumio_switch_to_driver_mode(data),
+		    "Cannot switch to driver mode.\n");
+	  return (0);
+	}
+    case LUMIO_FIRMWARE_3_0:
       printk(KERN_INFO "lumio_driver: Driver mode.\n");
       SAFE_CALL(usb_register_dev(interface, &lumio_class),
 		"Unable to get a minor.\n");
 
-      data->cur_mode = USB_DRIVER_MODE;
+      SAFE_CALL(lumio_init_data(data),
+		"Unable to allocate input devices (fakemice).\n");
 
       SAFE_CALL(lumio_switch_to_dualtouch_mode(data),
 		"Unable to switch to dual touch mode.\n");
 
-      SAFE_CALL(lumio_init_data(data),
-		"Unable to allocate input devices (fakemice).\n");
-
       printk(KERN_INFO "lumio_driver: Set to dual control.\n");
-    }
-  else
-    {
-      printk(KERN_WARNING "lumio_driver: Wrong device attached.\n");
-      ret = -ENODEV;
+      break;
     }
 
   return (0);

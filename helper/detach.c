@@ -23,6 +23,8 @@ usb_devices_list_t	to_detach_list[] =
     {0x202E, 0x0002},	/* Mouse mode firmware 2.0 */
     {0x202E, 0x0003},	/* Dual control mode firmware 2.0 */
     {0x202E, 0x0004},	/* Digitizer mode firmware 2.0 */
+    {0x202E, 0x0005},	/* Dual touch mode firmware 3.0 */
+    {0x202E, 0x0006},	/* 4 sensors mode firmware 3.0 */
     {0x0556, 0x3556},	/* Mouse mode firmware 1.0 */
     {0x0592, 0x6956},	/* Driver mode firmware 1.0 */
     {0, 0}
