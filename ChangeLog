@@ -1,17 +1,112 @@
-2009-10-05  Quentin Casasnovas  <quentin.casasnovas@gmail.com>
+commit cfbe55c6c90c2629cbc6c86203dbe2f750a96896
+Author: Quentin Casasnovas <quentin.casasnovas@gmail.com>
+Date:   Wed Nov 25 10:55:54 2009 +0100
 
-	* Version 0.1: First public release of this driver.
+    * Using modprobe instead of insmod
 
-	* Features: Emulates two touchpads.
+commit b7ea09e10a1ae7cf473273d35edde585cd6b8a3f
+Author: Quentin Casasnovas <quentin.casasnovas@gmail.com>
+Date:   Wed Nov 25 10:51:48 2009 +0100
 
-	* TODO:
-		- Add support for next firmware version (Digitizer)
-		- Convert documentation to kernel-doc (2h)
-		- Make a smart-guess of which cursor device the touch
-		belongs to (20min)
-		- Add support for activating/deactivating the controller
-		sound (1h).
+    * Snapshot 0.3
+    * Fixed a typo
 
-Copyright 2009 Quentin Casasnovas
-Copying and distribution of this file, with or without modification, are
-permitted provided the copyright notice and this notice are preserved.
+commit af55328cdd8e13278a41352b61137c72b3f748f2
+Author: Quentin Casasnovas <quentin.casasnovas@gmail.com>
+Date:   Wed Nov 25 10:18:58 2009 +0100
+
+    * Fixed Makefiles problems
+
+commit 63f123ad8232c21f8c0846b219b02bb90b36d66b
+Author: Quentin Casasnovas <quentin.casasnovas@gmail.com>
+Date:   Wed Nov 25 10:08:07 2009 +0100
+
+    * Improved the Makefile for packager
+    * Added the scripts that I forgot to commit last time.
+
+commit 54c762cc7c36fc7d15b84e88b9833be4847f7818
+Author: Quentin Casasnovas <quentin.casasnovas@gmail.com>
+Date:   Wed Nov 25 09:23:29 2009 +0100
+
+    * Renamed launch_test_suite.sh to lumio_create_cursors
+    * Renamed launch_driver.sh to lumio_load_driver
+    * Improved the driver documentation
+    * Fixed the draw_mice program
+
+commit 90dea5df079764c218984c2d8818546671d07b82
+Author: Quentin Casasnovas <quentin.casasnovas@gmail.com>
+Date:   Tue Nov 24 10:32:31 2009 +0100
+
+    * Now manage the new tiny controller (full-speed usb, 64bytes)
+    * Added a small utility to test what the /dev/input/lumioX devices are
+      reporting (see in check/printfrom_dev).
+    * Added a small utility to properly load the driver (see
+      helper/launch_driver.sh).
+    * Added a small utility to create the multiple cursors on the screen (see
+      helper/launch_test_suite.sh)
+    * Decrease the rate at which the draw_mice programm is drawing.
+    * Added the lumio VID to the detach program helper.
+
+commit 4ba5404602943152f545abe6f149814f946d975d
+Author: Quentin Casasnovas <quentin.casasnovas@gmail.com>
+Date:   Sun Nov 22 13:47:45 2009 +0100
+
+    * Firmware v2.0 is working correctly
+    * Added debug outputs
+
+commit 2765a4e8502673b6bac3db1682ea4eae2e713f3c
+Author: Quentin Casasnovas <quentin.casasnovas@gmail.com>
+Date:   Sat Nov 21 03:23:42 2009 +0100
+
+    * Added support for firmware v2.0, firmware 1.0 is still supported.
+    * Fixed a few typos in comments
+
+commit 1364ff3232430ffacc0374ff1e03782fa97fcea1
+Author: Quentin Casasnovas <quentin.casasnovas@gmail.com>
+Date:   Sat Nov 21 03:21:20 2009 +0100
+
+    * The detach helper has been improved, it now accept a list of pid/vid instead
+      of only two hard coded.
+
+commit 66b44e834177d61726dac27f4274f01c17abf2ec
+Author: Quentin Casasnovas <quentin.casasnovas@gmail.com>
+Date:   Thu Oct 8 16:02:54 2009 +0200
+
+    * Fixed the tarball rule
+
+commit 8e32ffafd42b04ec07574ca3d91f08ffe398d52d
+Author: Quentin Casasnovas <quentin.casasnovas@gmail.com>
+Date:   Thu Oct 8 16:00:09 2009 +0200
+
+    * Fixed the tarball rule
+
+commit 5301a72aff3143a2e92052fcb56105f30bf6d1de
+Author: Quentin Casasnovas <quentin.casasnovas@gmail.com>
+Date:   Thu Oct 8 15:46:30 2009 +0200
+
+    * Added Makefiles for detach and draw_mice
+    * Made a todo list in ChangeLog
+
+commit 6ee425152c36be6bb8f434b51db7e0fa4b07f5f8
+Author: Quentin Casasnovas <quentin.casasnovas@gmail.com>
+Date:   Thu Oct 8 15:09:22 2009 +0200
+
+    * Improved the documentation
+
+commit edd2e43477f755b7fae65ccca8e712b87c553fc9
+Author: Quentin Casasnovas <quentin.casasnovas@gmail.com>
+Date:   Thu Oct 8 11:38:55 2009 +0200
+
+    * Fix few files to make the public release v0.1
+
+commit 7fb229e0f66655f0c696e491320e6b1d13aaf2e3
+Author: quentin <quentin.casasnovas@gmail.com>
+Date:   Mon Oct 5 17:07:05 2009 +0200
+
+    * Added a ChangeLog
+
+commit 70340c69bd08e2f7d6435a4b8cdc353eb05dcc72
+Author: quentin <quentin@quentin-laptop.(none)>
+Date:   Mon Oct 5 16:39:18 2009 +0200
+
+    * Initial commit

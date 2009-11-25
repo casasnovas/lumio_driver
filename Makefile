@@ -1,6 +1,6 @@
 SHELL := /bin/sh
 SRCDIR := $(shell pwd)
-DESTDIR := /usb/local/bin
+DESTDIR := /usr/local/bin
 MODDIR := /lib/modules/$(shell uname -r)
 
 PROJECT_NAME=lumio_driver
@@ -31,18 +31,23 @@ doc:
 	doxygen Doxyfile
 
 install: all
-	install ./draw_mice $(DEST_DIR)
-	install ./lumio_create_cursors $(DEST_DIR)
-	install ./detach $(DEST_DIR)
-	install ./lumio_load_driver $(DEST_DIR)
+	install ./misc/99-lumio.rules /etc/udev/rules.d/
+	install ./draw_mice $(DESTDIR)
+	install ./lumio_create_cursors $(DESTDIR)
+	install ./detach $(DESTDIR)
+	install ./lumio_load_driver $(DESTDIR)
 	mkdir -p $(MODDIR)/misc
 	install ./lumio_driver.ko $(MODDIR)/misc/
 	depmod -a
-	@echo "Lumio driver is installed, you still have to load it (using lumio_load_driver commad)."
+	@echo "Lumio driver is installed, you still have to load it (using lumio_load_driver command)."
 
 uninstall:
-	rm $(MODDIR)/misc/lumio_driver.ko
-	rm $(DESTDIR)/{detach, lumio_load_driver, lumio_create_cursors, draw_mice}
+	rm -f $(MODDIR)/misc/lumio_driver.ko
+	rm -f $(DESTDIR)/detach
+	rm -f $(DESTDIR)/lumio_load_driver
+	rm -f $(DESTDIR)/lumio_create_cursors
+	rm -f $(DESTDIR)/draw_mice
+	rm -f /etc/udev/rules.d/99-lumio.rules
 
 tarball:
 	git archive --format=tar --prefix=$(PROJECT_NAME)-$(PROJECT_VERSION)/ master > $(PROJECT_NAME)-$(PROJECT_VERSION).tar

@@ -1,0 +1,2 @@
+KERNEL=="event*", ATTRS{name}=="Lumio touchscreen1" SYMLINK+="input/lumio1"
+KERNEL=="event*", ATTRS{name}=="Lumio touchscreen2" SYMLINK+="input/lumio2"
