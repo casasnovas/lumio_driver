@@ -1,6 +1,6 @@
 SHELL := /bin/sh
 SRCDIR := $(shell pwd)
-DESTDIR := /usb/bin
+DESTDIR := /usb/local/bin
 MODDIR := /lib/modules/$(shell uname -r)
 
 PROJECT_NAME=lumio_driver
