@@ -3,12 +3,12 @@
 echo "Detaching HID driver from lumio touchscreen..."
 ./helper/detach
 echo "Switching to driver mode..."
-insmod lumio_driver.ko
+modprobe lumio_driver
 sleep 2
 rmmod lumio_driver
 echo "Detaching HID driver from lumio touchscreen in driver mode..."
 ./helper/detach
 sleep 1
 echo "Loading lumio driver and setting to dual touch..."
-insmod lumio_driver.ko
+modprobe lumio_driver
 
