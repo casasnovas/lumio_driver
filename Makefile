@@ -6,23 +6,26 @@ MODDIR := /lib/modules/$(shell uname -r)
 PROJECT_NAME=lumio_driver
 PROJECT_VERSION=0.3
 
-all: lumio_driver detach check
+all: lumio_driver helper check
+
+print_src_dir:
+	@echo $(SRCDIR)
 
 lumio_driver:
 	make -C src/
 	mv $(SRCDIR)/src/lumio_driver.ko ./
 
-detach:
+helper:
 	make -C $(SRCDIR)/helper/
 	mv $(SRCDIR)/helper/detach ./
 	cp $(SRCDIR)/helper/lumio_load_driver ./
 
-draw_mice:
+check:
 	make -C check/
 	cp $(SRCDIR)/check/lumio_create_cursors ./
 	mv $(SRCDIR)/check/draw_mice ./
 
-.PHONY: doc
+.PHONY: doc helper check
 
 doc:
 	doxygen Doxyfile
