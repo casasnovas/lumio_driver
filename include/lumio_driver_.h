@@ -218,6 +218,21 @@
     } while (0);							\
 
 
+# define PRINT_RECEIVED_DEBUG_TRACE()					\
+  printk(KERN_INFO "lumio_driver:\tEvent type: ");			\
+  if (event_type == LUMIO_DUAL_EVENT)					\
+    printk(KERN_INFO "dualtouch event\n");				\
+  else									\
+    printk(KERN_INFO "singletouch event\n");				\
+  PRINT_BUFF(data->in_buffer, "first 8bytes");				\
+  printk(KERN_INFO							\
+	 "lumio_driver:\tFingers[%d](x, y) = (%d, %d)\n",		\
+	 which, x, y);							\
+  if (up)								\
+    printk(KERN_INFO "lumio_driver:    Operation: DOWN.\n");		\
+  else									\
+    printk(KERN_INFO "lumio_driver:    Operation: UP.\n");
+
 /*
  * types
  */
