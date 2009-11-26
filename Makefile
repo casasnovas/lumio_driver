@@ -6,7 +6,7 @@ MODDIR := /lib/modules/$(shell uname -r)
 PROJECT_NAME=lumio_driver
 PROJECT_VERSION=0.3
 
-all: lumio_driver helper check
+all: lumio_driver helper
 
 print_src_dir:
 	@echo $(SRCDIR)
@@ -32,10 +32,10 @@ doc:
 
 install: all
 	install ./misc/99-lumio.rules /etc/udev/rules.d/
-	install ./draw_mice $(DESTDIR)
-	install ./lumio_create_cursors $(DESTDIR)
-	install ./detach $(DESTDIR)
-	install ./lumio_load_driver $(DESTDIR)
+	install ./draw_mice $(DESTDIR)/
+	install ./lumio_create_cursors $(DESTDIR)/
+	install ./detach $(DESTDIR)/
+	install ./lumio_load_driver $(DESTDIR)/
 	mkdir -p $(MODDIR)/misc
 	install ./lumio_driver.ko $(MODDIR)/misc/
 	depmod -a
