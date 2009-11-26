@@ -32,8 +32,8 @@ doc:
 
 install: all
 	install ./misc/99-lumio.rules /etc/udev/rules.d/
-	install ./draw_mice $(DESTDIR)/
-	install ./lumio_create_cursors $(DESTDIR)/
+#	install ./draw_mice $(DESTDIR)/
+#	install ./lumio_create_cursors $(DESTDIR)/
 	install ./detach $(DESTDIR)/
 	install ./lumio_load_driver $(DESTDIR)/
 	mkdir -p $(MODDIR)/misc
