@@ -47,7 +47,16 @@ EndSection
 Section "InputDevice"
 	Identifier	"lumio1"
 	Driver		"evdev"
-	Option		"Device"		"/dev/input/eventN"
+	Option		"Device"		"/dev/input/lumio1"
+	Option		"GrabDevice"		"true"	# /!\ Don't forget that option
+	Option		"SendCoreEvents"	"true"
+	...
+EndSection
+
+Section "InputDevice"
+	Identifier	"lumio1"
+	Driver		"evdev"
+	Option		"Device"		"/dev/input/lumio2"
 	Option		"GrabDevice"		"true"	# /!\ Don't forget that option
 	Option		"SendCoreEvents"	"true"
 	...

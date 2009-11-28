@@ -9,41 +9,43 @@ To install this driver correctly, just do the folowing:
   42sh$ make
 As root:
   42sh$ make install
+Now you can plug the device, and type this command:
+  42sh$ lumio_load_driver
 
-You can verify that the driver is working by finding th devices it has created
-in /dev/input, it should be event{n, n+1} or mouse{n, n+1} depending on many
-things. Once you've find what are the devices, just do a :
-  42sh$ cat /dev/input/eventX
-and move your fingers on the touchscreen, if you see strange characters on your
-terminal, it means the driver is well installed :)
+If there's an error message saying that "lumio_load_driver" is not found, check
+that the directory /usr/local/bin is part of your PATH:
+  42sh$ echo $PATH
+If it's not part of your PATH :
+  42sh$ export PATH="/usr/local/bin:${PATH}"
+
+You can verify that the driver is working by finding the char devices it has
+created , it should appear as /dev/input/lumio1 and /dev/input/lumio2.
+
+Each time you unplug the touchscreen, don't forget to remove the driver:
+  42sh$ rmmod lumio_driver
+When you re-plug it, simply reload the driver:
+  42sh$ lumio_load_driver
+
+So now the driver is working and is taking care of your touchscreen, but still
+the xorg-server multiplex it with your current mouse. What you probably want to
+do is to create multiple cursors on the screen (you would need at least
+xorg-server 1.7 to do that). If you want to do it by hand, you should see the
+manual page of xinput command. But for your convenience, the driver provide you
+with a helper script that create the differents cursors, just type:
+  42sh$ lumio_create_cursors
 
  /!\----------
-| ! | Don't forget that the driver won't be loaded at next boot, to do so, follow
-| ! | instructions corresponding to your distribution.
+| ! | Don't forget that the driver won't be loaded at next boot, and for now it
+| ! | cannot be like that (the hid driver attaches it before lumio_driver).
  \!/----------
 
-ArchLinux:
-As root edit /etc/rc.conf and add 'lumio_driver' to the MODULES list:
-  42sh$ emacs /etc/rc.conf
-MODULES should look like 'MODULES( ... lumio_driver ...)' where the '...' are
-other modules that are loaded at boot time.
+You probably want to check that your touchscreen is working correctly, you can
+do so compiling the example programm draw_mice by typing in the check
+directory:
+  42sh$ make
+Once it is done, you can run the programm and draw with 2 fingers:
+  42sh$ ./draw_mice
 
-Gentoo:
-As root add a line to the file /etc/modules.autoload/kernel-2.6 containing
-'lumio_driver':
-  42sh$ echo 'lumio_driver' >> /etc/modules.autoload/kernel-2.6
-
-Debian/Ubuntu:
-As root add a line to the file /etc/modules containing 'lumio_driver':
-  42sh$ echo 'lumio_driver' >> /etc/modules
-
-
-Fedora/RedHat/CentOS/Mandrake/Mandriva:
-As root add a line to the file /etc/modules.conf containing 'lumio_driver'
-  42sh$ echo 'lumio_driver' >> /etc/modules.conf
-
-If your distribution is not in the list above, please refer to its
-documentation.
 
  ____ ___      .__                 __         .__  .__   
 |    |   \____ |__| ____   _______/  |______  |  | |  |  
