@@ -5,47 +5,122 @@
 |___|___|  /____  > |__| (____  /____/____/
          \/     \/            \/           
 
-To install this driver correctly, just do the folowing:
+1. Dependencies
+~~~~~~~~~~~~~~~
+1.1 For the driver
+~~~~~~~~~~~~~~~~~~
+To be able to compile this driver, some dependencies are neeeded : 
+   - gcc
+   - kernel-headers (it's called linux-headers on ubuntu and debian-like)
+   - glibc-headers
+   - libusb
+   - libusb-devel (libusb-dev on ubuntu and debian-like)
+libusb is not directly needed by this driver, but for a small utility which
+detach the kernel from the touchcreen before loading this driver. Otherwize the
+kernel takes care of the touchscreen and this driver is not able to communicate
+with it.
+
+1.2 For the draw_mice programm
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+If you want to use this touchscreen with xorg-server >= 1.7 and be able to use
+multiple fingers directly, you'll also need:
+   - libXi-dev >= 1.3
+   - libX11-dev >= 1.3
+   - xorg-server >= 1.7
+Those dependencies are required if you want to build the "draw_mice" program,
+which is an example program, a paint-like, with which you're able to draw on
+the screen with multiple fingers.
+
+
+2. Installation
+~~~~~~~~~~~~~~~
+To install this driver correctly, just do the folowing in the extracted
+directory containing the driver:
   42sh$ make
 As root:
   42sh$ make install
 Now you can plug the device, and type this command:
   42sh$ lumio_load_driver
 
+
+3. Checking the driver is running
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+You can verify that the driver is working by finding the two char devices it
+has created , it should appear as /dev/input/lumio1 and /dev/input/lumio2.
+
+
+4. What more ?
+~~~~~~~~~~~~~~
+You probably want to check that your touchscreen is working correctly, you can
+do so compiling the example program draw_mice by typing, in the check
+directory:
+  42sh$ make
+Now, you probably want to add multiple fingers on your screen, to do so type
+the following:
+  42sh$ lumio_create_cursors
+
+You should have noticed that one cursors has appeared in the center of your
+display. In fact there are two cursors but you only see one because they are at
+the exact same place.
+
+Anyway, now here the most interesting part, you probably wanna draw with 2
+fingers, right ? To do so, just type:
+  42sh$ ./draw_mice
+It should open a black window, move your fingers in it, it should draw on the
+screen :)
+
+
+5. Troubleshooting
+~~~~~~~~~~~~~~~~~~
+5.1 Errors when compiling
+~~~~~~~~~~~~~~~~~~~~~~~~~
+Please triple-check that you have all dependencies needed. If you have
+everything and still the driver doesn't compile, please send-me an e-mail at
+quentin.casasnovas@gmail.com with the output of the make command. Please also
+tell me the distribution and kernel version you are running.
+
+5.2 lumio_load_driver: command not found
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 If there's an error message saying that "lumio_load_driver" is not found, check
 that the directory /usr/local/bin is part of your PATH:
   42sh$ echo $PATH
 If it's not part of your PATH :
   42sh$ export PATH="/usr/local/bin:${PATH}"
 
-You can verify that the driver is working by finding the char devices it has
-created , it should appear as /dev/input/lumio1 and /dev/input/lumio2.
+5.3 lumio_create_cursors error
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+If there's an error when you try to run the script lumio_create_cursors, it
+probably means that you don't have the xinput program. It is needed to add new
+cursors on the screen, this utility should be included in x11-utils-app or
+there may even be a package called xinput on your distribution. You can check
+that you have it by typing:
+  42sh$ xinput
+If you got "command not found" then you don't have it, and you should search
+the package in your distribution that contains it.
 
+5.4 ./draw_mice doesn't run and end up with an error
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+You probably don't have xorg-server >= 1.7 running on your computer. You should
+upgrade it to at least 1.7 if you want to use the draw_mice programm.
+
+5.5 Something else ?
+~~~~~~~~~~~~~~~~~~~~
+If there is a problem not listed here, and all dependencies are installed on
+your computer, feel free to send me an e-mail with all details (the error, your
+distribution, your kernel version, etc).
+
+
+6. When you're finish testing...
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Each time you unplug the touchscreen, don't forget to remove the driver:
   42sh$ rmmod lumio_driver
 When you re-plug it, simply reload the driver:
   42sh$ lumio_load_driver
 
-So now the driver is working and is taking care of your touchscreen, but still
-the xorg-server multiplex it with your current mouse. What you probably want to
-do is to create multiple cursors on the screen (you would need at least
-xorg-server 1.7 to do that). If you want to do it by hand, you should see the
-manual page of xinput command. But for your convenience, the driver provide you
-with a helper script that create the differents cursors, just type:
-  42sh$ lumio_create_cursors
-
  /!\----------
 | ! | Don't forget that the driver won't be loaded at next boot, and for now it
 | ! | cannot be like that (the hid driver attaches it before lumio_driver).
  \!/----------
-
-You probably want to check that your touchscreen is working correctly, you can
-do so compiling the example programm draw_mice by typing in the check
-directory:
-  42sh$ make
-Once it is done, you can run the programm and draw with 2 fingers:
-  42sh$ ./draw_mice
-
 
  ____ ___      .__                 __         .__  .__   
 |    |   \____ |__| ____   _______/  |______  |  | |  |  
@@ -53,7 +128,7 @@ Once it is done, you can run the programm and draw with 2 fingers:
 |    |  /   |  \  |   |  \\___ \  |  |  / __ \|  |_|  |__
 |______/|___|  /__|___|  /____  > |__| (____  /____/____/
              \/        \/     \/            \/           
-As root:
+As root, in the directory where you extracted the driver:
   42sh$ make uninstall
 
  /!\---------
