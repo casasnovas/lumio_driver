@@ -1,0 +1,43 @@
+#! /bin/sh
+
+###############################################################################
+#    (c) Quentin Casasnovas (quentin.casasnovas@gmail.com)
+#
+#    This file is part of lumio_driver.
+#
+#    lumio_driver is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    lumio_driver is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with lumio_driver. If not, see <http://www.gnu.org/licenses/>.
+###############################################################################
+
+LUMIO1_MOUSE_ID=$(xinput list | grep lumio1 | sed 's/.*id=\([0-9]\+\).*/\1/g')
+LUMIO2_MOUSE_ID=$(xinput list | grep lumio2 | sed 's/.*id=\([0-9]\+\).*/\1/g')
+
+if [ -z ${LUMIO1_MOUSE_ID} ]; then
+    echo "Lumio emulated mouse not found... Are you sure the driver is running ?"
+    echo "It could also be the xorg.conf file not correctly configured, or you did not restart X since the loading of the driver."
+    exit 1
+else
+    echo "Creating new cursors..."
+    xinput create-master lumio1
+    xinput create-master lumio2
+
+    LUMIO1_CURSOR_ID=$(xinput list | grep 'lumio1 pointer' | sed 's/.*id=\([0-9]\+\).*/\1/g')
+    LUMIO2_CURSOR_ID=$(xinput list | grep 'lumio2 pointer' | sed 's/.*id=\([0-9]\+\).*/\1/g')
+
+    echo "Attaching lumio emulated mice to newly created cursors..."
+    xinput reattach ${LUMIO1_MOUSE_ID} ${LUMIO1_CURSOR_ID}
+    xinput reattach ${LUMIO2_MOUSE_ID} ${LUMIO2_CURSOR_ID}
+    echo "Yeah! You're running a multi-cursors GNU/Linux!"
+    echo "You may want to run the draw_mice programm to check everything's working."
+    exit 0
+fi

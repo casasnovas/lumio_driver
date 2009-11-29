@@ -1,0 +1,33 @@
+#! /bin/sh
+
+###############################################################################
+#    (c) Quentin Casasnovas (quentin.casasnovas@gmail.com)
+#
+#    This file is part of lumio_driver.
+#
+#    lumio_driver is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    lumio_driver is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with lumio_driver. If not, see <http://www.gnu.org/licenses/>.
+###############################################################################
+
+echo "Detaching HID driver from lumio touchscreen..."
+detach
+echo "Switching to driver mode..."
+modprobe lumio_driver
+sleep 2
+rmmod lumio_driver
+echo "Detaching HID driver from lumio touchscreen in driver mode..."
+detach
+sleep 1
+echo "Loading lumio driver and setting to dual touch..."
+modprobe lumio_driver
+

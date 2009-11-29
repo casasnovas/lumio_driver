@@ -1,5 +1,5 @@
 /*
-    (c) Quentin Casasnovas
+    (c) Quentin Casasnovas (quentin.casasnovas@gmail.com)
 
     This file is part of lumio_driver.
 
@@ -422,23 +422,6 @@ static int	lumio_switch_to_dualtouch_mode(struct usb_touchscreen* data)
 }
 
 /**
- * @brief Tells the controller to report single touch events.
- *
- *	This function tells the controller to report single touch events
- * sending it the following 8 bytes : 0x7F9B010000000000.
- *
- *	As the controller may be asked to tell in what configuration it is (see
- * lumio_actual_conf()), it's a good habit to check that it has really changed its
- * configuration to dual touch. If that is not the case we try to set it again
- * to dual touch configuration. After that last try, if the controller is still
- * not in dual touch configuration, an error is generated.
- *
- * @param data The private data asociated with the interface.
- * @return 0 on success and a negative number if it fails.
- */
-/* static int	lumio_switch_to_singletouch_mode(struct usb_touchscreen* data) */
-
-/**
  * @brief Discovers all endpoints the device has to offer.
  *
  *	 This functions probes all endpoints attached to the device and record
@@ -566,6 +549,7 @@ static void			lumio_treat_event(struct usb_touchscreen*	data,
   __u8				which = 0;
   __u32				x = 0;
   __u32				y = 0;
+  __u32				up = 0;
 
   ASSERT(data != NULL);
   ASSERT(data->in_buffer != NULL);
@@ -573,79 +557,50 @@ static void			lumio_treat_event(struct usb_touchscreen*	data,
   event = data->in_buffer;
   x = ((event[3] >> 4) << 8) | event[4];
   y = ((event[6] & 0xf) << 8) | event[5];
-
-  /* lumio_which_finger(data, &which, x, y); */
+  up = !!!((event[3] & LUMIO_OPERATION_MASK) & LUMIO_OPERATION_UP);
 
   if ((event[3] & (1 << 2)) == (1 << 2))
     which = 0;
   else
     which = 1;
 
-  printk(KERN_INFO "lumio_driver: WHICH: %d\n", which);
-
-  /* This one better works with evdev xorg driver */
+  /* Reporting the touch to the input layer */
   input_report_key(data->fakemouse[which].idev,
-		   BTN_LEFT, 0);
-  /* input_report_key(data->fakemouse[which].idev, */
-  /* 		   BTN_TOUCH, */
-  /* 		   !!!((event[3] & LUMIO_OPERATION_MASK) & LUMIO_OPERATION_UP)); */
-
-  /* The code below shouldn't change between xorg drivers. */
+		   BTN_LEFT, up);
   input_report_abs(data->fakemouse[which].idev,
 		   ABS_X, x);
   input_report_abs(data->fakemouse[which].idev,
 		   ABS_Y, y);
-  data->fakemouse[which].last_x = x;
-  data->fakemouse[which].last_y = y;
-
-  if (event_type == LUMIO_DUAL_EVENT)
-    printk(KERN_INFO "lumio_driver:    Event type: Dual touch event\n");
-  else
-    printk(KERN_INFO "lumio_driver:    Event type: single touch event\n");
-
-  PRINT_BUFF(data->in_buffer, "first 8bytes");
-  printk(KERN_INFO "lumio_driver:    Fingers[%d](x, y) = (%d, %d)\n", which, x, y);
-  if (!!!((event[3] & LUMIO_OPERATION_MASK) & LUMIO_OPERATION_UP))
-    printk(KERN_INFO "lumio_driver:    Operation: DOWN.\n");
-  else
-    printk(KERN_INFO "lumio_driver:    Operation: UP.\n");
-
   input_sync(data->fakemouse[which].idev);
+
+#ifdef LUMIO_DEBUG
+  PRINT_RECEIVED_DEBUG_TRACE();
+#endif
 
   if (event_type == LUMIO_DUAL_EVENT)
     {
       x = ((event[11] & 0xf) << 8) | event[10];
       y = ((event[11] >> 4) << 8) | event[12];
+      up = !!!((event[9] >> 4) & LUMIO_OPERATION_UP);
 
       if ((event[9] & (1 << 6)) == (1 << 6))
 	which = 0;
       else
 	which = 1;
 
-      printk(KERN_INFO "lumio_driver: WHICH: %d\n", which);
-  
-      PRINT_BUFF(data->in_buffer + 8, "2nd 8bytes");
-      printk(KERN_INFO "lumio_driver:    Fingers[%d](x, y) = (%d, %d)\n", which, x, y);
-      if (!!!((event[9] >> 4) & LUMIO_OPERATION_UP))
-	printk(KERN_INFO "lumio_driver:    Operation: DOWN.\n");
-      else
-	printk(KERN_INFO "lumio_driver:    Operation: UP.\n");
-
-      /* This one better works with evdev xorg driver */
+      /* Reporting the second touch */
       input_report_key(data->fakemouse[which].idev,
-      		       BTN_LEFT, 0);
-      /* input_report_key(data->fakemouse[which].idev, */
-      /* 		       BTN_LEFT, */
-      /* 		       !!!((event[9] >> 4) & LUMIO_OPERATION_UP)); */
-
-      /* The code below shouldn't change between xorg drivers. */
+      		       BTN_LEFT, up);
       input_report_abs(data->fakemouse[which].idev,
 		       ABS_X, x);
       input_report_abs(data->fakemouse[which].idev,
 		       ABS_Y, y);
-      data->fakemouse[which].last_x = x;
-      data->fakemouse[which].last_y = y;
       input_sync(data->fakemouse[which].idev);
+
+#ifdef LUMIO_DEBUG
+  PRINT_RECEIVED_DEBUG_TRACE();
+#endif
+
     }
 }
 

@@ -79,7 +79,7 @@ int			main(void)
 	    ++nb_detached;
 	}
 
-  printf("detach: %d device(s) detached.\n", nb_detached);
+  printf("\tdetach: %d device(s) detached.\n", nb_detached);
 
   return (0);
 }

@@ -1,9 +1,9 @@
-SOURCES=detach.c
-BIN=detach
 CLIBS=-lusb
 
-all:
-	gcc $(SOURCES) $(CLIBS) -o $(BIN)
+all: detach
+
+detach: detach.c
+	gcc detach.c $(CLIBS) -o detach
 
 clean:
-	rm -f $(BIN)
+	rm -f detach
